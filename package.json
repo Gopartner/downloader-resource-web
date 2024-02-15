@@ -1,0 +1,22 @@
+{
+  "name": "web-downloader",
+  "version": "1.0.0",
+  "description": "Alat untuk clone website atau unduh resource ",
+  "main": "server.js",
+  "scripts": {
+    "start": "nodemon server.js",
+    "test": "node tes.js"
+  },
+  "keywords": [
+    "downloader-website"
+  ],
+  "author": "yudibilly",
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^6.0.1",
+    "express": "^4.18.2",
+    "morgan": "^1.10.0",
+    "nodemon": "^3.0.3",
+    "request": "^2.88.2"
+  }
+}

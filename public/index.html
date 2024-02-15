@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Website Resources</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="title">Download Website Resources</h1>
+        <div class="button-container">
+            <button onclick="createFolder()">Create Folder</button>
+            <button onclick="downloadResources()">Download Resources</button>
+            <button onclick="compressFolder()">Compress Folder</button>
+        </div>
+        <p id="message" class="message"></p>
+    </div>
+
+    <script>
+        function createFolder() {
+            fetch("/createFolder?folderPath=src/resource-web", { method: "GET" })
+                .then(response => response.text())
+                .then(message => showMessage(message));
+        }
+
+        function downloadResources() {
+            fetch("/downloadResources?baseUrl=https://example.com&folderPath=src/resource-web", { method: "GET" })
+                .then(response => response.text())
+                .then(message => showMessage(message));
+        }
+
+        function compressFolder() {
+            fetch("/compressFolder?folderPath=src/resource-web", { method: "GET" })
+                .then(response => response.blob())
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = "website_resources.zip";
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                });
+        }
+
+        function showMessage(message) {
+            document.getElementById("message").innerText = message;
+        }
+    </script>
+</body>
+
+</html>
+
