@@ -1,71 +1,68 @@
-const express = require("express");
-const path = require("path");
-const fs = require("fs");
-const request = require("request");
-const archiver = require("archiver");
-const morgan = require("morgan");
+// server.js
+
+const express = require('express');
+const bodyParser = require('body-parser');
+const os = require('os');
+const fs = require('fs');
+const path = require('path');
+const request = require('request');
+const archiver = require('archiver');
+const morgan = require('morgan');
 
 const app = express();
+const PORT = process.env.PORT || 3000;
 
-// Middleware untuk logger
-app.use(morgan("dev"));
+app.use(express.static('public'));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(morgan('dev'));
 
-// Middleware untuk mengirim file statis
-app.use(express.static(path.join(__dirname, "public")));
-
-// Route untuk membuat folder
-app.get("/createFolder", (req, res) => {
-    const folderPath = req.query.folderPath;
-    if (!fs.existsSync(folderPath)) {
-        fs.mkdirSync(folderPath);
-        res.send("Folder created");
-    } else {
-        res.send("Folder already exists");
-    }
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Route untuk mengunduh dan menyimpan resource dari website
-app.get("/downloadResources", (req, res) => {
-    const baseUrl = req.query.baseUrl;
-    const folderPath = req.query.folderPath;
-
-    request(baseUrl, (error, response, body) => {
-        if (!error && response.statusCode == 200) {
-            const resourceUrls = body.match(/(?:href|src)="([^"]+)"/g).map(match => match.split('"')[1]);
-
-            resourceUrls.forEach(resourceUrl => {
-                request(resourceUrl).pipe(fs.createWriteStream(path.join(folderPath, path.basename(resourceUrl))));
-            });
-
-            res.send("Resources downloaded");
-        } else {
-            res.send("Error downloading resources");
-        }
-    });
-});
-
-// Route untuk mengompresi folder menjadi file zip
-app.get("/compressFolder", (req, res) => {
-    const folderPath = req.query.folderPath;
-    const zipFilePath = `${folderPath}.zip`;
-
-    const output = fs.createWriteStream(zipFilePath);
-    const archive = archiver("zip", {
-        zlib: { level: 9 } // Kompresi dengan tingkat tertinggi
+app.post('/download', (req, res) => {
+    const { url } = req.body;
+    const zipFileName = 'web.zip';
+    const output = fs.createWriteStream(zipFileName);
+    const archive = archiver('zip', {
+        zlib: { level: 9 }
     });
 
-    output.on("close", () => {
-        res.download(zipFilePath); // Unduh file zip setelah selesai dikompresi
+    output.on('close', () => {
+        console.log(archive.pointer() + ' total bytes');
+        console.log('archiver has been finalized and the output file descriptor has closed.');
+        res.download(zipFileName);
+    });
+
+    archive.on('error', (err) => {
+        throw err;
     });
 
     archive.pipe(output);
-    archive.directory(folderPath, false);
-    archive.finalize();
+
+    request(url)
+        .on('response', (response) => {
+            console.log(`Downloading ${url}...`);
+        })
+        .on('error', (err) => {
+            throw err;
+        })
+        .pipe(archive);
 });
 
-// Server berjalan di port 3000
-const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    const ipAddresses = [];
+    const networkInterfaces = os.networkInterfaces();
+    for (const interfaceKey in networkInterfaces) {
+        const interfaces = networkInterfaces[interfaceKey];
+        for (let i = 0; i < interfaces.length; i++) {
+            const iface = interfaces[i];
+            if (iface.family === 'IPv4' && !iface.internal) {
+                ipAddresses.push(iface.address);
+            }
+        }
+    }
+    console.log(`Server is running on the following IP addresses:`);
+    ipAddresses.forEach(ip => console.log(`- http://${ip}:${PORT}`));
 });
 
